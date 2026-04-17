@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#05070b" />
+  <title>CRISPR Ops Console</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="boot-screen" data-boot-screen>
+    <div class="boot-frame">
+      <p class="boot-title">CRISPR OPS BOOTLOADER v4.2</p>
+      <pre class="boot-log" data-boot-log></pre>
+      <div class="boot-progress">
+        <div class="boot-progress-bar" data-boot-bar></div>
+      </div>
+      <p class="boot-percent" data-boot-percent>0%</p>
+    </div>
+  </div>
+
+  <div class="noise"></div>
+  <div class="scanline"></div>
+  <div class="shell">
+    <header class="topbar panel reveal">
+      <div>
+        <p class="eyebrow">CRISPR // SECURE CHANNEL</p>
+        <h1>Operations Dashboard</h1>
+      </div>
+      <div class="status-row">
+        <span class="chip" data-clock>00:00:00</span>
+        <span class="chip online"><span class="dot"></span>link stable</span>
+        <button class="chip action" type="button" data-action="open-war-story">open cc_03</button>
+        <button class="chip action" type="button" data-action="pulse">pulse nodes</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel hero reveal">
+        <p class="eyebrow">live node telemetry</p>
+        <h2>System Integrity: <span data-integrity>99.97%</span></h2>
+        <p class="lead">Real-time command surface for payload visibility, event tracking, and health diagnostics.</p>
+        <div class="metrics">
+          <article class="metric"><span>active nodes</span><strong data-count="12">0</strong></article>
+          <article class="metric"><span>threat score</span><strong data-count="3">0</strong></article>
+          <article class="metric"><span>sealed logs</span><strong data-count="248">0</strong></article>
+          <article class="metric"><span>open ports</span><strong data-count="7">0</strong></article>
+        </div>
+      </section>
+
+      <section class="panel terminal-panel reveal">
+        <div class="panel-head">
+          <span>command stream</span>
+          <span>session: authenticated</span>
+        </div>
+        <pre class="terminal" data-terminal></pre>
+      </section>
+
+      <section class="panel events reveal">
+        <div class="panel-head">
+          <span>event feed</span>
+          <span data-event-count>0 events</span>
+        </div>
+        <div class="event-list" data-event-list></div>
+      </section>
+
+      <section class="panel file-panel reveal">
+        <div class="panel-head">
+          <span>payload registry</span>
+          <span data-file-count>0 files</span>
+        </div>
+        <div class="file-grid" data-file-grid></div>
+      </section>
+
+      <section class="panel viewer-panel reveal">
+        <div class="panel-head">
+          <span data-active-file>no file selected</span>
+          <span data-active-meta>idle</span>
+        </div>
+        <pre class="viewer" data-viewer>Select a payload from the registry.</pre>
+      </section>
+
+      <section class="panel letter-panel archive-vc01 reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">VC_01</p>
+            <h3>THE 15-YEAR LETTER</h3>
+            <p class="letter-sub">VISION // time capsule archive</p>
+          </div>
+          <button class="chip action" type="button" data-action="open-letter">open letter 2040</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">sealed archive</p>
+          <p class="capsule-copy">A human letter from 2026, stored like a time capsule and revealed through a popup reader.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="open-letter">open 2040 letter</button>
+            <span class="capsule-note">loader included</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel letter-panel archive-cc02 reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">CC_02</p>
+            <h3>THE CASE STUDY</h3>
+            <p class="letter-sub">CULTURE // gamma deck archive</p>
+          </div>
+          <button class="chip action" type="button" data-action="open-case-study">open case study</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">deployed and documented</p>
+          <p class="capsule-copy">Pick one thing you deployed. Make a Gamma.ai deck about it. Nerdy. Honest. Tell us what you broke first.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="open-case-study">open deck PDF</button>
+            <span class="capsule-note">attached file linked</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel letter-panel archive-vc02 reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">VC_02</p>
+            <h3>YOUR SUCCESSION PLAN</h3>
+            <p class="letter-sub">RITUAL // selection archive</p>
+          </div>
+          <button class="chip action" type="button" data-action="open-ritual">open ritual.md</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">batch filter</p>
+          <p class="capsule-copy">A trial by fire for the next batch, focused on grit, debugging depth, and improving the past.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="open-ritual">open selection ritual</button>
+            <span class="capsule-note">loader included</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel letter-panel archive-cc03 reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">CC_03</p>
+            <h3>THE DEEP-DIVE</h3>
+            <p class="letter-sub">WAR STORY // deployment archive</p>
+          </div>
+          <button class="chip action" type="button" data-action="open-war-story">open war_story.md</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">hosted under pressure</p>
+          <p class="capsule-copy">A story about fighting a locked Ubuntu container, backing out of bad tools, and getting a site live with Node, Express, and Git discipline.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="open-war-story">open deep-dive</button>
+            <span class="capsule-note">loader included</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel letter-panel archive-vc03 reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">VC_03</p>
+            <h3>THE ROADMAP</h3>
+            <p class="letter-sub">PLAN // next year archive</p>
+          </div>
+          <button class="chip action" type="button" data-action="open-roadmap">open roadmap.md</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">future plan</p>
+          <p class="capsule-copy">A one-year roadmap for keeping the server alive, building a hostel file mirror, and shipping a one-command deployer for the next batch.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="open-roadmap">open roadmap</button>
+            <span class="capsule-note">loader included</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel ticker reveal">
+        <div class="ticker-track" data-ticker></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" data-letter-modal hidden>
+    <div class="modal-backdrop" data-letter-close></div>
+    <section class="modal-card panel" role="dialog" aria-modal="true" aria-labelledby="letter-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">VC_01</p>
+          <h3 id="letter-title">The 15-Year Letter</h3>
+        </div>
+        <button class="chip action" type="button" data-letter-close>close</button>
+      </div>
+      <div class="modal-loader" data-letter-loader>
+        <div class="modal-loader-text" data-letter-loader-text>Rewinding to April 2026...</div>
+        <div class="modal-loader-bar"><span data-letter-loader-bar></span></div>
+      </div>
+      <article class="capsule-letter" data-letter-body hidden>
+        <p><strong>The Letter to 2040</strong><br />To the Freshman who finds this,</p>
+
+        <p>It's 12:30 AM on a Saturday in April 2026. I'm sitting in my room, probably a few blocks from where you are now, staring at a flickering cursor on a terminal screen. My eyes are tired, my coffee is cold, and I've spent the last four hours fighting a machine that didn't want to listen to me.</p>
+
+        <p>By the time you read this, the "cutting-edge" tech I'm using will be a museum piece. You probably talk to your computer like a friend. You probably don't even know what an "IP address" is because the network just works.</p>
+
+        <p>But I want you to know why this dusty server matters.</p>
+
+        <p>In 2026, I was a first-year B.Tech student at IIIT Nagpur, just like you. I was part of a group called CRISPR. They didn't just want us to pass exams; they wanted us to break things and put them back together. This server was my first real test. I tried to do things the "easy way," and the system locked me out. I had to learn the hard way, line by line, error by error, how to make the machine obey.</p>
+
+        <p>Engineering isn't about the shiny tools. It's about that moment at midnight when everything is broken, everyone else is asleep, and you refuse to give up. It's about the grit it takes to find a way around a "Permission Denied" error.</p>
+
+        <p>When you finish your first big project, look at the screen and remember that fifteen years ago, someone else was sitting in the same chair, feeling the same frustration and the same eventual rush of victory.</p>
+
+        <p>The tech changes. The struggle is forever. Don't just follow the curriculum, pick the locks, break the limits, and leave something behind for the person who will be sitting here in 2055.</p>
+
+        <p class="signature">With grit and curiosity,<br />A First Year, Class of 2029<br />IIIT Nagpur</p>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal" data-ritual-modal hidden>
+    <div class="modal-backdrop" data-ritual-close></div>
+    <section class="modal-card panel" role="dialog" aria-modal="true" aria-labelledby="ritual-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">VC_02</p>
+          <h3 id="ritual-title">Your Succession Plan</h3>
+        </div>
+        <button class="chip action" type="button" data-ritual-close>close</button>
+      </div>
+      <div class="modal-loader" data-ritual-loader>
+        <div class="modal-loader-text" data-ritual-loader-text>Recovering selection ritual...</div>
+        <div class="modal-loader-bar"><span data-ritual-loader-bar></span></div>
+      </div>
+      <article class="capsule-letter" data-ritual-body hidden>
+        <p><strong>VC_02: The Succession Plan</strong><br />Filename: RITUAL.md</p>
+
+        <p><strong>THE CRISPR SELECTION RITUAL: BATCH OF 2027</strong><br />Architect: user4 (First Year, B.Tech)</p>
+
+        <p>Tonight is not an interview. It is a test of whether someone can stay calm when the machine gets stubborn.</p>
+
+        <p>To find the next Ghost in the Machine, I would not start with CGPA or a polished resume. I would look for grit, technical intuition, and the ability to pivot when the system says no.</p>
+
+        <p><strong>Phase 1: The Keep-Alive Test</strong><br />The candidate gets an SSH login to a container that has been rigged with a cron job. Every 60 seconds, anything that is not root gets killed.</p>
+        <p>The goal is simple: write a background script, a loop, or whatever survives long enough to keep the service alive before the judges check the port.</p>
+        <p>What it proves: persistence. Can they keep uptime under hostile conditions without panicking?</p>
+
+        <p><strong>Phase 2: The Legacy Fallback</strong><br />The candidate is told to deploy a modern web app, but the server is running an old version of Node.js, so the newest libraries fail immediately.</p>
+        <p>The goal is to diagnose the MODULE_NOT_FOUND error, recognize that the problem is environmental, and manually research a compatible legacy stack, even if that means using something like Express 4.17.1 instead of whatever is trending.</p>
+        <p>What it proves: debugging depth. Do they understand the reason behind the error, or do they only know how to copy a fix from the internet?</p>
+
+        <p><strong>Phase 3: The Visionary's Mirror</strong><br />The candidate finds a folder full of the letters and roadmaps I left behind in 2026. Their final task is to refactor the past: find one inefficiency in the dashboard I built, improve it, and then write their own letter to the freshman of 2041.</p>
+        <p>The goal is to improve the interactive routing or the UI of this dashboard, but the real test is whether they can improve something that already exists without breaking it.</p>
+        <p>What it proves: humility, taste, and the courage to improve upon their predecessors.</p>
+
+        <p><strong>The Selection Criterion</strong><br />I will not choose the one who finishes first.</p>
+        <p>I will choose the one who, when the server crashed at midnight, did not ask "What do I do?" but instead sent me a log file explaining exactly why it broke and how they bypassed it.</p>
+
+        <p><strong>We don't follow the curriculum. We pick the locks.</strong></p>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal" data-roadmap-modal hidden>
+    <div class="modal-backdrop" data-roadmap-close></div>
+    <section class="modal-card panel" role="dialog" aria-modal="true" aria-labelledby="roadmap-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">VC_03</p>
+          <h3 id="roadmap-title">The Roadmap</h3>
+        </div>
+        <button class="chip action" type="button" data-roadmap-close>close</button>
+      </div>
+      <div class="modal-loader" data-roadmap-loader>
+        <div class="modal-loader-text" data-roadmap-loader-text>Loading next-year plan...</div>
+        <div class="modal-loader-bar"><span data-roadmap-loader-bar></span></div>
+      </div>
+      <article class="capsule-letter" data-roadmap-body hidden>
+        <p><strong>VC_03: The Roadmap</strong><br />Filename: ROADMAP.md</p>
+
+        <p><strong>My Plan for the Next Year<br />By: user4</strong></p>
+
+        <p>I don't want to just talk about "learning." Here is exactly what I’m going to build to make this server and this club better.</p>
+
+        <p><strong>3 Months: The "Auto-Restart" Script</strong><br />Right now, if this container reboots or the system kills my Node process, the dashboard goes down.</p>
+        <p>The Goal: I’m going to write a small script that runs every few minutes to check if my website is still alive. If it’s dead, the script will restart it automatically.</p>
+        <p>The Tech: Just some simple Bash and Cron jobs. I want 100% uptime without me having to manually check it.</p>
+
+        <p><strong>6 Months: A Local File Hub for the Hostel</strong><br />Our hostel internet can be really slow or go down sometimes.</p>
+        <p>The Goal: I want to turn a part of this server into a local "Mirror." It’ll be a place where we can host common libraries (like React or Bootstrap), Linux ISOs, or study notes so we can download them over the local LAN at high speed instead of wasting our daily data.</p>
+        <p>The Tech: A simple file server with a search bar.</p>
+
+        <p><strong>1 Year: The "One-Command" Deployer</strong><br />When I started tonight, I struggled with paths, Git, and Node versions. It took way too long.</p>
+        <p>The Goal: I want to build a tool for the next batch of freshmen. They should be able to type one command on their own laptop, and their code should automatically push to this server, install the right modules, and go live.</p>
+        <p>The Tech: A custom CLI tool. I want to make it so they can focus on coding, not fighting the terminal for three hours like I did.</p>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal" data-case-study-modal hidden>
+    <div class="modal-backdrop" data-case-study-close></div>
+    <section class="modal-card panel" role="dialog" aria-modal="true" aria-labelledby="case-study-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">CC_02</p>
+          <h3 id="case-study-title">The Case Study</h3>
+        </div>
+        <button class="chip action" type="button" data-case-study-close>close</button>
+      </div>
+      <div class="modal-loader" data-case-study-loader>
+        <div class="modal-loader-text" data-case-study-loader-text>Loading Gamma deck archive...</div>
+        <div class="modal-loader-bar"><span data-case-study-loader-bar></span></div>
+      </div>
+      <article class="case-study-body" data-case-study-body hidden>
+        <p><strong>CC_02: The Case Study</strong></p>
+        <p>Pick one thing you deployed. Make a Gamma.ai deck about it. Nerdy. Honest. Tell us what you broke first.</p>
+        <iframe class="case-study-frame" src="/assets/The-Zero-Privilege-Pivot.pdf" title="CC_02 Case Study PDF"></iframe>
+        <p><a class="button" href="/assets/The-Zero-Privilege-Pivot.pdf" target="_blank" rel="noreferrer">open pdf in new tab</a></p>
+      </article>
+    </section>
+  </div>
+
+  <div class="modal" data-war-story-modal hidden>
+    <div class="modal-backdrop" data-war-story-close></div>
+    <section class="modal-card panel" role="dialog" aria-modal="true" aria-labelledby="war-story-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">CC_03</p>
+          <h3 id="war-story-title">The Deep-Dive</h3>
+        </div>
+        <button class="chip action" type="button" data-war-story-close>close</button>
+      </div>
+      <div class="modal-loader" data-war-story-loader>
+        <div class="modal-loader-text" data-war-story-loader-text>Replaying deployment notes...</div>
+        <div class="modal-loader-bar"><span data-war-story-loader-bar></span></div>
+      </div>
+      <article class="capsule-letter" data-war-story-body hidden>
+        <p><strong>CC_03: The Deep-Dive</strong><br />Filename: WAR_STORY.md</p>
+
+        <p><strong>How I Hosted a Site on a Locked Server (And Why It Was a Pain)<br />By: user4</strong></p>
+
+        <p>If you’re reading this, you probably know the feeling of a server telling you "Permission Denied" over and over. Tonight, I was given a restricted Ubuntu container and told to host a website. Here’s the story of how I fought the machine and won.</p>
+
+        <p><strong>1. The Problem</strong><br />I tried to be fancy. I tried to install Docker and Coolify to handle everything for me. The system said: "No." Because it’s a restricted container, I didn't have the kernel permissions to run Docker. I couldn't even start a basic background service using systemctl. I was stuck in a box with no tools.</p>
+
+        <p><strong>2. The Pivot</strong><br />Instead of complaining, I went back to basics. I realized I didn't need a massive deployment tool; I just needed Node.js. I wrote a simple script using a library called Express. I pointed it to Port 8000. I used the server's internal IP to bridge the connection to the outside world.</p>
+
+        <p><strong>3. The "Node Version" Trap</strong><br />Even then, it broke. I installed the latest version of Express, but the server was running an old version of Node. It gave me a weird error about node:events.</p>
+        <p>The Fix: I had to force the server to install an older, "Legacy" version of Express (v4.17.1). Suddenly, everything clicked.</p>
+
+        <p><strong>4. Making it "Professional" (The GitHub Bridge)</strong><br />Typing code directly into a terminal is slow and risky. One wrong command and you lose everything. I moved all my code to GitHub. I set up a "Sync" where I code comfortably on my Mac and just "Pull" the changes to the server. This means if the server ever wipes my files, I can bring them back in 5 seconds.</p>
+
+        <p><strong>The Lesson</strong><br />Being a developer isn't about knowing the fanciest tools. It’s about knowing how to work when those tools are taken away. If the front door is locked, find a window. If the window is locked, pick the lock.</p>
+      </article>
+    </section>
+  </div>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

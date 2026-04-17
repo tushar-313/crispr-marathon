@@ -1,0 +1,12 @@
+{
+  "name": "crispr-marathon",
+  "version": "1.0.0",
+  "description": "CRISPR vault dashboard",
+  "main": "dashboard.js",
+  "scripts": {
+    "start": "node dashboard.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
