@@ -1,0 +1,3 @@
+username,display_name,email,group,password
+batch01lead,Batch 01 Lead,batch01lead@example.com,batch-01,
+batch02lead,Batch 02 Lead,batch02lead@example.com,batch-02,

@@ -1,0 +1,16 @@
+[Unit]
+Description=CRISPR Marathon Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/crispr-marathon
+ExecStart=/usr/bin/node /var/www/crispr-marathon/dashboard.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=8000
+
+[Install]
+WantedBy=multi-user.target

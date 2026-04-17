@@ -218,6 +218,71 @@ function startEventFeed() {
   }, 2600);
 }
 
+function setupNeonCursor() {
+  if (!window.matchMedia('(pointer:fine)').matches) {
+    return;
+  }
+
+  const cursor = document.createElement('div');
+  cursor.className = 'neon-cursor';
+  cursor.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(cursor);
+  document.documentElement.classList.add('cursor-enabled');
+
+  const interactiveSelector = [
+    'a',
+    'button',
+    '.button',
+    '.chip.action',
+    '.file-item',
+    '[role="button"]',
+    '[data-action]',
+    'summary',
+    'label[for]'
+  ].join(',');
+
+  let x = window.innerWidth / 2;
+  let y = window.innerHeight / 2;
+  let targetX = x;
+  let targetY = y;
+
+  function animate() {
+    x += (targetX - x) * 0.24;
+    y += (targetY - y) * 0.24;
+    cursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    window.requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  document.addEventListener('mousemove', (event) => {
+    targetX = event.clientX;
+    targetY = event.clientY;
+    cursor.classList.add('is-visible');
+  });
+
+  document.addEventListener('mouseover', (event) => {
+    const trigger = event.target.closest(interactiveSelector);
+    cursor.classList.toggle('is-active', Boolean(trigger));
+  });
+
+  document.addEventListener('mouseout', () => {
+    cursor.classList.remove('is-active');
+  });
+
+  document.addEventListener('mousedown', () => {
+    cursor.classList.add('is-pressed');
+  });
+
+  document.addEventListener('mouseup', () => {
+    cursor.classList.remove('is-pressed');
+  });
+
+  document.addEventListener('mouseleave', () => {
+    cursor.classList.remove('is-visible');
+  });
+}
+
 async function openTimedModal({ modalSelector, loaderTextSelector, loaderBarSelector, bodySelector, frames, eventMessage }) {
   const modal = document.querySelector(modalSelector);
   const loaderText = document.querySelector(loaderTextSelector);
@@ -593,6 +658,8 @@ function wireActions() {
 }
 
 async function init() {
+  setupNeonCursor();
+
   tickClock();
   window.setInterval(tickClock, 1000);
 

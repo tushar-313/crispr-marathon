@@ -18,6 +18,54 @@
   box-sizing: border-box;
 }
 
+.cursor-enabled,
+.cursor-enabled * {
+  cursor: none !important;
+}
+
+.neon-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1200;
+  background: radial-gradient(circle, rgba(95, 247, 255, 0.95) 0%, rgba(66, 255, 170, 0.8) 45%, rgba(66, 255, 170, 0.05) 100%);
+  box-shadow:
+    0 0 10px rgba(95, 247, 255, 0.8),
+    0 0 22px rgba(66, 255, 170, 0.56),
+    0 0 36px rgba(66, 255, 170, 0.28);
+  transform: translate3d(-9999px, -9999px, 0);
+  transition: width 120ms ease, height 120ms ease, margin 120ms ease, opacity 120ms ease;
+  opacity: 0;
+}
+
+.neon-cursor.is-visible {
+  opacity: 1;
+}
+
+.neon-cursor.is-active {
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  box-shadow:
+    0 0 12px rgba(95, 247, 255, 0.95),
+    0 0 28px rgba(95, 247, 255, 0.65),
+    0 0 48px rgba(66, 255, 170, 0.34);
+}
+
+.neon-cursor.is-pressed {
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+}
+
 body {
   margin: 0;
   color: var(--text);
