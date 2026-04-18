@@ -145,7 +145,22 @@ function setDangerState(selector, value, threshold = HIGH_USAGE_THRESHOLD) {
     return;
   }
 
-  element.classList.toggle('is-danger', Number.isFinite(value) && value > threshold);
+  element.classList.toggle('is-danger', Number.isFinite(value) && value >= threshold);
+}
+
+function setMetricDangerState(selector, value, threshold = HIGH_USAGE_THRESHOLD) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    return;
+  }
+
+  const isDanger = Number.isFinite(value) && value >= threshold;
+  element.classList.toggle('is-danger', isDanger);
+
+  const card = element.closest('.metric-card');
+  if (card) {
+    card.classList.toggle('is-danger', isDanger);
+  }
 }
 
 function setMeter(selector, value) {
@@ -340,9 +355,9 @@ function renderSummary(snapshot) {
   setText('[data-load-value]', Number.isFinite(load) ? load.toFixed(1) : '--');
   setText('[data-uptime-value]', uptimeLabel(uptime));
 
-  setDangerState('[data-cpu-value]', cpuUsage);
-  setDangerState('[data-memory-value]', memoryUsage);
-  setDangerState('[data-storage-value]', storageUsage);
+  setMetricDangerState('[data-cpu-value]', cpuUsage);
+  setMetricDangerState('[data-memory-value]', memoryUsage);
+  setMetricDangerState('[data-storage-value]', storageUsage);
 
   setMeter('[data-cpu-meter]', cpuUsage);
   setMeter('[data-memory-meter]', memoryUsage);
