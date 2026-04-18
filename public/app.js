@@ -13,7 +13,7 @@ const terminalFrames = [
   '$ hostname -I',
   '192.168.77.84',
   '$ netstat -tnlp | head -5',
-  'tcp LISTEN 0 0 0.0.0.0:3004 node',
+  'tcp LISTEN 0 0 192.168.77.84:3004 node',
   '$ tail -f /var/log/ops-feed.log',
   '[INFO] health ping accepted',
   '[INFO] payload scan complete',

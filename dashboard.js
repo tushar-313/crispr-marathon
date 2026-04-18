@@ -105,10 +105,8 @@ app.get('*', (req, res) => {
 });
 
 function startServer(port) {
-    const server = app.listen(port, '0.0.0.0', () => {
-        const address = server.address();
-        const activePort = address && typeof address === 'object' ? address.port : port;
-        console.log(`Vault Live on http://0.0.0.0:${activePort}`);
+    const server = app.listen(port, '192.168.77.84', () => {
+        console.log('server live on http://192.168.77.84:3004/');
     });
 
     server.on('error', (error) => {
