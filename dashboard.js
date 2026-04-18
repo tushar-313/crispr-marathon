@@ -1,4 +1,5 @@
 const express = require('express');
+const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -376,31 +377,43 @@ function formatPercent(value) {
     return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'n/a';
 }
 
-async function sendTelegram(message) {
+function sendTelegram(message) {
     if (!TELEGRAM_ALERTS_ENABLED || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-        return { ok: false, skipped: true };
+        return Promise.resolve({ ok: false, skipped: true });
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    try {
-        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CHAT_ID,
-                text: String(message).slice(0, 3900),
-                disable_web_page_preview: true,
-            }),
-            signal: controller.signal,
+    return new Promise((resolve) => {
+        const data = JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            text: String(message).slice(0, 3900),
+            disable_web_page_preview: true,
         });
 
-        return { ok: response.ok, status: response.status };
-    } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : 'unknown error' };
-    } finally {
-        clearTimeout(timeout);
-    }
+        const req = https.request({
+            hostname: 'api.telegram.org',
+            path: '/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+            },
+            timeout: 8000,
+        }, (res) => {
+            resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode });
+        });
+
+        req.on('error', (error) => {
+            resolve({ ok: false, error: error.message });
+        });
+
+        req.on('timeout', () => {
+            req.abort();
+            resolve({ ok: false, error: 'timeout' });
+        });
+
+        req.write(data);
+        req.end();
+    });
 }
 
 function createAlertState() {
@@ -645,65 +658,101 @@ async function handleBotCommand(command) {
     }
 }
 
-async function sendTelegramReply(chatId, text) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    try {
-        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: String(text).slice(0, 3900),
-                parse_mode: 'Markdown',
-                disable_web_page_preview: true,
-            }),
-            signal: controller.signal,
+function sendTelegramReply(chatId, text) {
+    return new Promise((resolve) => {
+        const data = JSON.stringify({
+            chat_id: chatId,
+            text: String(text).slice(0, 3900),
+            parse_mode: 'Markdown',
+            disable_web_page_preview: true,
         });
-    } catch (err) {
-        console.error(`[telegram-bot] Failed to send reply: ${err.message}`);
-    } finally {
-        clearTimeout(timeout);
-    }
+
+        const req = https.request({
+            hostname: 'api.telegram.org',
+            path: '/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+            },
+            timeout: 10000,
+        }, () => {
+            resolve();
+        });
+
+        req.on('error', (error) => {
+            console.error('[telegram-bot] Failed to send reply: ' + error.message);
+            resolve();
+        });
+
+        req.on('timeout', () => {
+            req.abort();
+            console.error('[telegram-bot] Failed to send reply: timeout');
+            resolve();
+        });
+
+        req.write(data);
+        req.end();
+    });
 }
 
 let botPollingRunning = false;
 let lastUpdateId = 0;
 
-async function pollTelegramUpdates() {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 35000);
-    try {
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30&allowed_updates=["message"]`;
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data.ok || !Array.isArray(data.result)) return;
-
-        for (const update of data.result) {
-            lastUpdateId = Math.max(lastUpdateId, update.update_id);
-            const msg = update.message;
-            if (!msg || !msg.text) continue;
-
-            // Only respond to the authorized chat
-            const chatId = String((msg && msg.chat && msg.chat.id) || '');
-            if (chatId !== TELEGRAM_CHAT_ID) {
-                await sendTelegramReply(msg.chat.id, '🔒 Unauthorized. This bot only responds to its owner.');
-                continue;
+function pollTelegramUpdates() {
+    return new Promise((resolve) => {
+        const req = https.request({
+            hostname: 'api.telegram.org',
+            path: '/bot' + TELEGRAM_BOT_TOKEN + '/getUpdates?offset=' + (lastUpdateId + 1) + '&timeout=30&allowed_updates=%5B%22message%22%5D',
+            method: 'GET',
+            timeout: 35000,
+        }, (res) => {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+                return resolve();
             }
 
-            if (msg.text.startsWith('/')) {
-                const reply = await handleBotCommand(msg.text);
-                await sendTelegramReply(msg.chat.id, reply);
-            }
-        }
-    } catch (err) {
-        if (err.name !== 'AbortError') {
-            console.error(`[telegram-bot] Polling error: ${err.message}`);
-        }
-    } finally {
-        clearTimeout(timeout);
-    }
+            let body = '';
+            res.on('data', chunk => body += chunk);
+            res.on('end', async () => {
+                try {
+                    const data = JSON.parse(body);
+                    if (!data.ok || !Array.isArray(data.result)) return resolve();
+
+                    for (const update of data.result) {
+                        lastUpdateId = Math.max(lastUpdateId, update.update_id);
+                        const msg = update.message;
+                        if (!msg || !msg.text) continue;
+
+                        const chatId = String((msg.chat && msg.chat.id) || '');
+                        if (chatId !== String(TELEGRAM_CHAT_ID)) {
+                            await sendTelegramReply(msg.chat.id, '🔒 Unauthorized. This bot only responds to its owner.');
+                            continue;
+                        }
+
+                        if (msg.text.startsWith('/')) {
+                            const reply = await handleBotCommand(msg.text);
+                            await sendTelegramReply(msg.chat.id, reply);
+                        }
+                    }
+                } catch (e) {
+                    console.error('[telegram-bot] Polling parse error: ' + e.message);
+                }
+                resolve();
+            });
+        });
+
+        req.on('error', (error) => {
+            console.error('[telegram-bot] Polling error: ' + error.message);
+            resolve();
+        });
+
+        req.on('timeout', () => {
+            req.abort();
+            resolve();
+        });
+
+        req.end();
+    });
 }
 
 function startTelegramBotPolling() {
@@ -723,7 +772,8 @@ function startTelegramBotPolling() {
     };
 
     loop().catch((err) => {
-        console.error(`[telegram-bot] Loop crashed: ${err.message}`);
+        const detail = err && err.stack ? err.stack : String(err);
+        console.error(`[telegram-bot] Loop crashed:\n${detail}`);
         botPollingRunning = false;
     });
 }
