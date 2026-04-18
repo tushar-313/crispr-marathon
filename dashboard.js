@@ -18,6 +18,8 @@ const METRICS_COLLECT_SYSTEM = (process.env.METRICS_COLLECT_SYSTEM || 'true').to
 const TELEGRAM_ALERTS_ENABLED = (process.env.TELEGRAM_ALERTS_ENABLED || '').toLowerCase() === 'true';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
+const TELEGRAM_ALLOWED_CHAT_IDS = process.env.TELEGRAM_ALLOWED_CHAT_IDS || '';
+const TELEGRAM_BOT_PUBLIC = (process.env.TELEGRAM_BOT_PUBLIC || 'true').toLowerCase() === 'true';
 const TELEGRAM_BOT_COMMANDS = (process.env.TELEGRAM_BOT_COMMANDS || '').toLowerCase() === 'true';
 
 const ALERT_INTERVAL_MS = Math.max(10_000, Number(process.env.ALERT_INTERVAL_MS) || 30_000);
@@ -536,6 +538,25 @@ function formatDuration(seconds) {
     return parts.join(' ');
 }
 
+function parseAllowedChatIds() {
+    const values = [TELEGRAM_CHAT_ID, TELEGRAM_ALLOWED_CHAT_IDS]
+        .filter(Boolean)
+        .join(',')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+    return new Set(values);
+}
+
+const ALLOWED_CHAT_IDS = parseAllowedChatIds();
+
+function isAuthorizedChatId(chatId) {
+    if (TELEGRAM_BOT_PUBLIC) return true;
+    if (!chatId) return false;
+    return ALLOWED_CHAT_IDS.has(String(chatId).trim());
+}
+
 async function handleBotCommand(command) {
     const cmd = command.trim().toLowerCase().split(/\s+/)[0];
 
@@ -723,8 +744,8 @@ function pollTelegramUpdates() {
                         const msg = update.message;
                         if (!msg || !msg.text) continue;
 
-                        const chatId = String((msg.chat && msg.chat.id) || '');
-                        if (chatId !== String(TELEGRAM_CHAT_ID)) {
+                        const chatId = String((msg.chat && msg.chat.id) || '').trim();
+                        if (!isAuthorizedChatId(chatId)) {
                             await sendTelegramReply(msg.chat.id, '🔒 Unauthorized. This bot only responds to its owner.');
                             continue;
                         }
@@ -758,7 +779,8 @@ function pollTelegramUpdates() {
 function startTelegramBotPolling() {
     if (botPollingRunning) return;
     if (!TELEGRAM_BOT_COMMANDS) return;
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+    if (!TELEGRAM_BOT_TOKEN) return;
+    if (!TELEGRAM_BOT_PUBLIC && !TELEGRAM_CHAT_ID) return;
 
     botPollingRunning = true;
     console.log('[telegram-bot] Command bot started (long-polling)');
