@@ -89,6 +89,14 @@ function formatSpeed(value) {
   return `${value.toFixed(2)} GHz`;
 }
 
+function mountLabel(value) {
+  if (!value) {
+    return '--';
+  }
+
+  return value === '/' ? 'root (/)' : value;
+}
+
 function formatDateTime(value) {
   if (!value) {
     return '--';
@@ -343,7 +351,7 @@ function renderSummary(snapshot) {
   setMetricNote('[data-cpu-note]', cpuNotes.length ? cpuNotes.join(' | ') : 'CPU details unavailable.');
   setMetricNote('[data-memory-note]', Number.isFinite(memoryUsage) ? `${bytesLabel(snapshot.memory.used)} used of ${bytesLabel(snapshot.memory.total)}` : 'Memory details unavailable.');
   setMetricNote('[data-storage-note]', snapshot?.storage?.primary
-    ? `${bytesLabel(snapshot.storage.primary.used)} used on ${snapshot.storage.primary.mount}`
+    ? `${bytesLabel(snapshot.storage.primary.used)} used of ${bytesLabel(snapshot.storage.primary.size)} on ${mountLabel(snapshot.storage.primary.mount)}`
     : 'Primary storage unavailable.');
   setMetricNote('[data-temperature-note]', Number.isFinite(temperature)
     ? `Peak ${Number.isFinite(snapshot?.temperature?.max) ? `${snapshot.temperature.max.toFixed(1)} C` : 'n/a'}`
@@ -365,7 +373,7 @@ function renderSummary(snapshot) {
     ? `${bytesLabel(snapshot.memory.free)} free | ${bytesLabel(snapshot.memory.available)} available | swap ${bytesLabel(snapshot.memory.swapUsed)} / ${bytesLabel(snapshot.memory.swapTotal)}`
     : 'Memory detail unavailable.');
   setText('[data-storage-detail]', snapshot?.storage?.primary
-    ? `${snapshot.storage.primary.fileSystem} on ${snapshot.storage.primary.mount} | ${bytesLabel(snapshot.storage.primary.available)} free`
+    ? `${snapshot.storage.primary.fileSystem} on ${mountLabel(snapshot.storage.primary.mount)} | ${bytesLabel(snapshot.storage.primary.available)} free`
     : 'Storage detail unavailable.');
   setText('[data-temperature-detail]', Number.isFinite(temperature)
     ? `Current ${tempLabel(temperature)} | ${Array.isArray(snapshot?.temperature?.cores) && snapshot.temperature.cores.length ? `${snapshot.temperature.cores.length} core sensors` : 'no core sensors'}`
