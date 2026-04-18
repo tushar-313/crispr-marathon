@@ -1,5 +1,6 @@
 const HISTORY_LIMIT = 48;
 const REFRESH_INTERVAL = 5000;
+const HIGH_USAGE_THRESHOLD = 95;
 
 const history = {
   cpu: [],
@@ -136,6 +137,15 @@ function setText(selector, value) {
   if (element) {
     element.textContent = value;
   }
+}
+
+function setDangerState(selector, value, threshold = HIGH_USAGE_THRESHOLD) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    return;
+  }
+
+  element.classList.toggle('is-danger', Number.isFinite(value) && value > threshold);
 }
 
 function setMeter(selector, value) {
@@ -330,12 +340,20 @@ function renderSummary(snapshot) {
   setText('[data-load-value]', Number.isFinite(load) ? load.toFixed(1) : '--');
   setText('[data-uptime-value]', uptimeLabel(uptime));
 
+  setDangerState('[data-cpu-value]', cpuUsage);
+  setDangerState('[data-memory-value]', memoryUsage);
+  setDangerState('[data-storage-value]', storageUsage);
+
   setMeter('[data-cpu-meter]', cpuUsage);
   setMeter('[data-memory-meter]', memoryUsage);
   setMeter('[data-storage-meter]', storageUsage);
   setMeter('[data-temperature-meter]', Number.isFinite(temperature) ? Math.min(100, (temperature / 120) * 100) : 0);
   setMeter('[data-load-meter]', load);
   setMeter('[data-uptime-meter]', Number.isFinite(uptime) ? Math.min(100, (uptime / (24 * 60 * 60)) * 100) : 0);
+
+  setDangerState('[data-cpu-meter]', cpuUsage);
+  setDangerState('[data-memory-meter]', memoryUsage);
+  setDangerState('[data-storage-meter]', storageUsage);
 
   const cpuNotes = [];
   if (Number.isFinite(snapshot?.cpu?.physicalCores)) {
@@ -365,6 +383,10 @@ function renderSummary(snapshot) {
   setText('[data-memory-chip]', percentLabel(memoryUsage));
   setText('[data-storage-chip]', percentLabel(storageUsage));
   setText('[data-temperature-chip]', tempLabel(temperature));
+
+  setDangerState('[data-cpu-chip]', cpuUsage);
+  setDangerState('[data-memory-chip]', memoryUsage);
+  setDangerState('[data-storage-chip]', storageUsage);
 
   setText('[data-cpu-detail]', Number.isFinite(cpuUsage)
     ? `${percentLabel(snapshot.cpu.userPercent)} user | ${percentLabel(snapshot.cpu.systemPercent)} system | ${percentLabel(snapshot.cpu.idlePercent)} idle`

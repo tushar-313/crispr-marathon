@@ -165,6 +165,13 @@ h1{
 	letter-spacing:.04em;
 }
 
+.metric-value.is-danger,
+.metric-pill.is-danger{
+	color:var(--red);
+	text-shadow:0 0 10px rgba(255,51,51,.25);
+	border-color:rgba(255,51,51,.45);
+}
+
 .metric-note{
 	margin:0;
 	color:var(--muted);
@@ -187,6 +194,11 @@ h1{
 	background:linear-gradient(90deg,var(--accent),rgba(15,255,65,.6));
 	box-shadow:0 0 12px rgba(15,255,65,.6), inset 0 0 8px rgba(15,255,65,.3);
 	transition:width .35s ease;
+}
+
+.meter span.is-danger{
+	background:linear-gradient(90deg,var(--red),var(--orange));
+	box-shadow:0 0 12px rgba(255,51,51,.6), inset 0 0 8px rgba(255,51,51,.3);
 }
 
 .meter.temp span{
