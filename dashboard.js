@@ -23,9 +23,9 @@ const ALERT_INTERVAL_MS = Math.max(10_000, Number(process.env.ALERT_INTERVAL_MS)
 const ALERT_REPEAT_MS = Math.max(60_000, Number(process.env.ALERT_REPEAT_MS) || (60 * 60 * 1000));
 const ALERT_CONSECUTIVE_SAMPLES = Math.max(1, Number(process.env.ALERT_CONSECUTIVE_SAMPLES) || 3);
 
-const ALERT_CPU_THRESHOLD = Number(process.env.ALERT_CPU_THRESHOLD ?? 90);
-const ALERT_MEMORY_THRESHOLD = Number(process.env.ALERT_MEMORY_THRESHOLD ?? 90);
-const ALERT_DISK_THRESHOLD = Number(process.env.ALERT_DISK_THRESHOLD ?? 90);
+const ALERT_CPU_THRESHOLD = Number(process.env.ALERT_CPU_THRESHOLD || 90);
+const ALERT_MEMORY_THRESHOLD = Number(process.env.ALERT_MEMORY_THRESHOLD || 90);
+const ALERT_DISK_THRESHOLD = Number(process.env.ALERT_DISK_THRESHOLD || 90);
 
 const register = promClient.register;
 register.setDefaultLabels({
@@ -459,9 +459,9 @@ function startTelegramAlertsLoop() {
         try {
             const snapshot = await collectSystemSnapshot();
 
-            const cpu = snapshot?.cpu?.usagePercent;
-            const mem = snapshot?.memory?.usagePercent;
-            const disk = snapshot?.storage?.primary?.usagePercent;
+            const cpu = (snapshot && snapshot.cpu && snapshot.cpu.usagePercent);
+            const mem = (snapshot && snapshot.memory && snapshot.memory.usagePercent);
+            const disk = (snapshot && snapshot.storage && snapshot.storage.primary && snapshot.storage.primary.usagePercent);
 
             await Promise.all([
                 evaluateAlert({
@@ -469,21 +469,21 @@ function startTelegramAlertsLoop() {
                     state: alertStates.highCpu,
                     condition: Number.isFinite(cpu) && cpu >= ALERT_CPU_THRESHOLD,
                     title: `High CPU (>= ${ALERT_CPU_THRESHOLD}%)`,
-                    detail: `CPU: ${formatPercent(cpu)}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                    detail: `CPU: ${formatPercent(cpu)}\nHost: ${(snapshot && snapshot.host && snapshot.host.hostname) || 'n/a'}\nTime: ${(snapshot && snapshot.sampledAt) || 'n/a'}`,
                 }),
                 evaluateAlert({
                     key: 'highMemory',
                     state: alertStates.highMemory,
                     condition: Number.isFinite(mem) && mem >= ALERT_MEMORY_THRESHOLD,
                     title: `High Memory (>= ${ALERT_MEMORY_THRESHOLD}%)`,
-                    detail: `Memory: ${formatPercent(mem)}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                    detail: `Memory: ${formatPercent(mem)}\nHost: ${(snapshot && snapshot.host && snapshot.host.hostname) || 'n/a'}\nTime: ${(snapshot && snapshot.sampledAt) || 'n/a'}`,
                 }),
                 evaluateAlert({
                     key: 'highDisk',
                     state: alertStates.highDisk,
                     condition: Number.isFinite(disk) && disk >= ALERT_DISK_THRESHOLD,
                     title: `High Disk (>= ${ALERT_DISK_THRESHOLD}%)`,
-                    detail: `Disk: ${formatPercent(disk)}\nMount: ${snapshot?.storage?.primary?.mount || 'n/a'}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                    detail: `Disk: ${formatPercent(disk)}\nMount: ${(snapshot && snapshot.storage && snapshot.storage.primary && snapshot.storage.primary.mount) || 'n/a'}\nHost: ${(snapshot && snapshot.host && snapshot.host.hostname) || 'n/a'}\nTime: ${(snapshot && snapshot.sampledAt) || 'n/a'}`,
                 }),
             ]);
         } catch {
@@ -545,27 +545,27 @@ async function handleBotCommand(command) {
         case '/status': {
             try {
                 const snap = await collectSystemSnapshot();
-                const cpu = snap?.cpu?.usagePercent;
-                const mem = snap?.memory?.usagePercent;
-                const disk = snap?.storage?.primary?.usagePercent;
-                const temp = snap?.temperature?.current;
-                const load = snap?.cpu?.averages;
+                const cpu = (snap && snap.cpu && snap.cpu.usagePercent);
+                const mem = (snap && snap.memory && snap.memory.usagePercent);
+                const disk = (snap && snap.storage && snap.storage.primary && snap.storage.primary.usagePercent);
+                const temp = (snap && snap.temperature && snap.temperature.current);
+                const load = (snap && snap.cpu && snap.cpu.averages);
 
                 return [
                     '📊 *Server Status*',
                     '',
-                    `🖥  Host: \`${snap?.host?.hostname || 'n/a'}\``,
-                    `🐧  OS: ${snap?.host?.distro || 'n/a'} (${snap?.host?.architecture || 'n/a'})`,
-                    `⚙️  CPU: ${snap?.cpu?.brand || 'n/a'}`,
+                    `🖥  Host: \`${(snap && snap.host && snap.host.hostname) || 'n/a'}\``,
+                    `🐧  OS: ${(snap && snap.host && snap.host.distro) || 'n/a'} (${(snap && snap.host && snap.host.architecture) || 'n/a'})`,
+                    `⚙️  CPU: ${(snap && snap.cpu && snap.cpu.brand) || 'n/a'}`,
                     '',
                     `💻  CPU Usage: *${formatPercent(cpu)}*`,
-                    `🧠  Memory: *${formatPercent(mem)}* (${formatBytes(snap?.memory?.used)} / ${formatBytes(snap?.memory?.total)})`,
-                    `💾  Disk: *${formatPercent(disk)}* (${formatBytes(snap?.storage?.primary?.used)} / ${formatBytes(snap?.storage?.primary?.size)})`,
+                    `🧠  Memory: *${formatPercent(mem)}* (${formatBytes((snap && snap.memory && snap.memory.used))} / ${formatBytes((snap && snap.memory && snap.memory.total))})`,
+                    `💾  Disk: *${formatPercent(disk)}* (${formatBytes((snap && snap.storage && snap.storage.primary && snap.storage.primary.used))} / ${formatBytes((snap && snap.storage && snap.storage.primary && snap.storage.primary.size))})`,
                     `🌡  Temp: ${temp != null ? `${temp}°C` : 'n/a'}`,
                     `📈  Load: ${Array.isArray(load) ? load.join(' / ') : 'n/a'}`,
-                    `⏱  Uptime: ${formatDuration(snap?.host?.uptimeSeconds)}`,
+                    `⏱  Uptime: ${formatDuration((snap && snap.host && snap.host.uptimeSeconds))}`,
                     '',
-                    `🕐  Sampled: ${snap?.sampledAt || 'n/a'}`,
+                    `🕐  Sampled: ${(snap && snap.sampledAt) || 'n/a'}`,
                 ].join('\n');
             } catch (err) {
                 return `❌ Failed to collect status: ${err.message}`;
@@ -575,9 +575,9 @@ async function handleBotCommand(command) {
         case '/health': {
             try {
                 const snap = await collectSystemSnapshot();
-                const cpu = snap?.cpu?.usagePercent ?? 0;
-                const mem = snap?.memory?.usagePercent ?? 0;
-                const disk = snap?.storage?.primary?.usagePercent ?? 0;
+                const cpu = (snap && snap.cpu && snap.cpu.usagePercent) || 0;
+                const mem = (snap && snap.memory && snap.memory.usagePercent) || 0;
+                const disk = (snap && snap.storage && snap.storage.primary && snap.storage.primary.usagePercent) || 0;
 
                 const cpuOk = cpu < ALERT_CPU_THRESHOLD;
                 const memOk = mem < ALERT_MEMORY_THRESHOLD;
@@ -602,11 +602,11 @@ async function handleBotCommand(command) {
                 return [
                     '⏱ *Uptime Report*',
                     '',
-                    `🖥  Host: ${formatDuration(snap?.host?.uptimeSeconds)}`,
-                    `🟢  Process: ${formatDuration(snap?.process?.uptimeSeconds)}`,
-                    `📦  Node: ${snap?.process?.nodeVersion || 'n/a'}`,
-                    `🧠  Heap: ${formatBytes(snap?.process?.heapUsed)} / ${formatBytes(snap?.process?.heapTotal)}`,
-                    `📍  RSS: ${formatBytes(snap?.process?.rss)}`,
+                    `🖥  Host: ${formatDuration((snap && snap.host && snap.host.uptimeSeconds))}`,
+                    `🟢  Process: ${formatDuration((snap && snap.process && snap.process.uptimeSeconds))}`,
+                    `📦  Node: ${(snap && snap.process && snap.process.nodeVersion) || 'n/a'}`,
+                    `🧠  Heap: ${formatBytes((snap && snap.process && snap.process.heapUsed))} / ${formatBytes((snap && snap.process && snap.process.heapTotal))}`,
+                    `📍  RSS: ${formatBytes((snap && snap.process && snap.process.rss))}`,
                 ].join('\n');
             } catch (err) {
                 return `❌ Failed: ${err.message}`;
@@ -616,7 +616,7 @@ async function handleBotCommand(command) {
         case '/disk': {
             try {
                 const snap = await collectSystemSnapshot();
-                const vols = snap?.storage?.volumes || [];
+                const vols = (snap && snap.storage && snap.storage.volumes) || [];
                 if (!vols.length) return '💾 No storage volumes found.';
 
                 const lines = ['💾 *Storage Volumes*', ''];
@@ -686,7 +686,7 @@ async function pollTelegramUpdates() {
             if (!msg || !msg.text) continue;
 
             // Only respond to the authorized chat
-            const chatId = String(msg.chat?.id || '');
+            const chatId = String((msg && msg.chat && msg.chat.id) || '');
             if (chatId !== TELEGRAM_CHAT_ID) {
                 await sendTelegramReply(msg.chat.id, '🔒 Unauthorized. This bot only responds to its owner.');
                 continue;
@@ -821,17 +821,17 @@ async function sampleMetrics() {
 
     appUp.set(1);
 
-    if (Number.isFinite(snapshot?.cpu?.usagePercent)) systemCpuUsagePercent.set(snapshot.cpu.usagePercent);
-    if (Number.isFinite(snapshot?.memory?.usagePercent)) systemMemoryUsagePercent.set(snapshot.memory.usagePercent);
-    if (Number.isFinite(snapshot?.storage?.primary?.usagePercent)) systemDiskUsagePercent.set(snapshot.storage.primary.usagePercent);
-    if (Number.isFinite(snapshot?.temperature?.current)) systemTemperatureCelsius.set(snapshot.temperature.current);
-    if (Array.isArray(snapshot?.cpu?.averages)) {
+    if (Number.isFinite((snapshot && snapshot.cpu && snapshot.cpu.usagePercent))) systemCpuUsagePercent.set(snapshot.cpu.usagePercent);
+    if (Number.isFinite((snapshot && snapshot.memory && snapshot.memory.usagePercent))) systemMemoryUsagePercent.set(snapshot.memory.usagePercent);
+    if (Number.isFinite((snapshot && snapshot.storage && snapshot.storage.primary && snapshot.storage.primary.usagePercent))) systemDiskUsagePercent.set(snapshot.storage.primary.usagePercent);
+    if (Number.isFinite((snapshot && snapshot.temperature && snapshot.temperature.current))) systemTemperatureCelsius.set(snapshot.temperature.current);
+    if (Array.isArray((snapshot && snapshot.cpu && snapshot.cpu.averages))) {
         const [one, five, fifteen] = snapshot.cpu.averages;
         if (Number.isFinite(one)) systemLoadAverage.set({ window: '1m' }, one);
         if (Number.isFinite(five)) systemLoadAverage.set({ window: '5m' }, five);
         if (Number.isFinite(fifteen)) systemLoadAverage.set({ window: '15m' }, fifteen);
     }
-    if (Number.isFinite(snapshot?.host?.uptimeSeconds)) systemHostUptimeSeconds.set(snapshot.host.uptimeSeconds);
+    if (Number.isFinite((snapshot && snapshot.host && snapshot.host.uptimeSeconds))) systemHostUptimeSeconds.set(snapshot.host.uptimeSeconds);
 }
 
 app.get(METRICS_ENDPOINT, async (req, res) => {
