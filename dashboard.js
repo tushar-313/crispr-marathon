@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const app = express();
@@ -26,6 +27,20 @@ function isSafeAssetName(fileName) {
 
 function getIndexFilePath() {
     return path.join(PUBLIC_DIR, 'index.html');
+}
+
+function getPreferredHostIp() {
+    const interfaces = os.networkInterfaces();
+
+    for (const entries of Object.values(interfaces)) {
+        for (const entry of entries || []) {
+            if (entry && entry.family === 'IPv4' && !entry.internal) {
+                return entry.address;
+            }
+        }
+    }
+
+    return '127.0.0.1';
 }
 
 app.use(express.static(PUBLIC_DIR, {
@@ -105,8 +120,9 @@ app.get('*', (req, res) => {
 });
 
 function startServer(port) {
-    const server = app.listen(port, '192.168.77.84', () => {
-        console.log('server live on http://192.168.77.84:3004/');
+    const server = app.listen(port, '0.0.0.0', () => {
+        const hostIp = getPreferredHostIp();
+        console.log(`server live on http://${hostIp}:${port}/`);
     });
 
     server.on('error', (error) => {
