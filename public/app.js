@@ -353,7 +353,7 @@ async function openCaseStudyModal() {
     loaderBarSelector: '[data-case-study-loader-bar]',
     bodySelector: '[data-case-study-body]',
     frames: caseStudyLoaderFrames,
-    eventMessage: 'CC_02 case study opened in popup reader.'
+    eventMessage: 'CC_02 // anomaly archive cracked open.'
   });
 }
 
@@ -484,7 +484,7 @@ function setupGemHunt() {
     await sleep(980);
 
     revealTitle.textContent = 'BEST FEATURE UNLOCKED';
-    revealSubtitle.textContent = 'CC_02 // THE CASE STUDY';
+    revealSubtitle.textContent = 'CC_02 // CHAOS ARCHIVE ONLINE';
     await sleep(980);
 
     revealOverlay.classList.remove('is-active');
