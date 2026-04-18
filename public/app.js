@@ -281,6 +281,7 @@ async function openTimedModal({ modalSelector, loaderTextSelector, loaderBarSele
   const loaderText = document.querySelector(loaderTextSelector);
   const loaderBar = document.querySelector(loaderBarSelector);
   const body = document.querySelector(bodySelector);
+  const loader = loaderText ? loaderText.closest('.modal-loader') : null;
 
   if (!modal || !loaderText || !loaderBar || !body) {
     return;
@@ -288,16 +289,11 @@ async function openTimedModal({ modalSelector, loaderTextSelector, loaderBarSele
 
   modal.hidden = false;
   modal.classList.add('is-open');
-  body.hidden = true;
-  loaderBar.style.width = '0%';
 
-  for (let index = 0; index < frames.length; index += 1) {
-    loaderText.textContent = frames[index];
-    loaderBar.style.width = `${Math.round(((index + 1) / frames.length) * 100)}%`;
-    await sleep(420);
+  // Open modal content immediately and suppress legacy loader banners.
+  if (loader) {
+    loader.hidden = true;
   }
-
-  await sleep(220);
   body.hidden = false;
   addEvent(eventMessage);
 }

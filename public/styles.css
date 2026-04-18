@@ -624,6 +624,22 @@ body::before {
   margin-bottom: 14px;
 }
 
+.modal-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.modal-open-external {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  white-space: nowrap;
+}
+
 .modal-head h3 {
   margin: 8px 0 0;
   font-family: 'Orbitron', sans-serif;
