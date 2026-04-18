@@ -9,9 +9,11 @@ const bootSequence = [
 
 const terminalFrames = [
   '$ whoami',
-  'operator',
+  'user4',
+  '$ hostname -I',
+  '192.168.77.84',
   '$ netstat -tnlp | head -5',
-  'tcp LISTEN 0 0 0.0.0.0:8000 node',
+  'tcp LISTEN 0 0 0.0.0.0:3004 node',
   '$ tail -f /var/log/ops-feed.log',
   '[INFO] health ping accepted',
   '[INFO] payload scan complete',
@@ -94,6 +96,29 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function nextFrame() {
+  return new Promise((resolve) => window.requestAnimationFrame(resolve));
+}
+
+async function typeLine(node, line, charInterval = 10) {
+  let index = 0;
+  let last = performance.now();
+
+  while (index < line.length) {
+    await nextFrame();
+    const now = performance.now();
+    const elapsed = now - last;
+    if (elapsed < charInterval) {
+      continue;
+    }
+
+    const step = Math.max(1, Math.floor(elapsed / charInterval));
+    node.textContent += line.slice(index, index + step);
+    index += step;
+    last = now;
+  }
+}
+
 async function runBootLoader() {
   const screen = document.querySelector('[data-boot-screen]');
   const log = document.querySelector('[data-boot-log]');
@@ -106,17 +131,14 @@ async function runBootLoader() {
 
   for (let index = 0; index < bootSequence.length; index += 1) {
     const line = bootSequence[index];
-    for (const char of line) {
-      log.textContent += char;
-      await sleep(8);
-    }
+    await typeLine(log, line, 8);
     log.textContent += '\n';
     log.scrollTop = log.scrollHeight;
 
     const progress = Math.round(((index + 1) / bootSequence.length) * 100);
     bar.style.width = `${progress}%`;
     percent.textContent = `${progress}%`;
-    await sleep(170);
+    await sleep(130);
   }
 
   await sleep(420);
@@ -129,32 +151,6 @@ function tickClock() {
     return;
   }
   clock.textContent = timeStamp();
-}
-
-function animateCount(node, target, duration = 900) {
-  let start = null;
-
-  function frame(ts) {
-    if (start === null) {
-      start = ts;
-    }
-
-    const progress = Math.min((ts - start) / duration, 1);
-    node.textContent = String(Math.round(target * progress));
-
-    if (progress < 1) {
-      requestAnimationFrame(frame);
-    }
-  }
-
-  requestAnimationFrame(frame);
-}
-
-function setMetrics() {
-  document.querySelectorAll('[data-count]').forEach((node) => {
-    const target = Number(node.getAttribute('data-count') || '0');
-    animateCount(node, target);
-  });
 }
 
 function setTicker() {
@@ -176,16 +172,13 @@ async function runTerminal() {
     terminal.textContent = '';
 
     for (const frame of terminalFrames) {
-      for (const char of frame) {
-        terminal.textContent += char;
-        await sleep(12);
-      }
+      await typeLine(terminal, frame, 11);
       terminal.textContent += '\n';
       terminal.scrollTop = terminal.scrollHeight;
-      await sleep(150);
+      await sleep(120);
     }
 
-    await sleep(1000);
+    await sleep(760);
   }
 }
 
@@ -294,6 +287,7 @@ async function openTimedModal({ modalSelector, loaderTextSelector, loaderBarSele
   }
 
   modal.hidden = false;
+  modal.classList.add('is-open');
   body.hidden = true;
   loaderBar.style.width = '0%';
 
@@ -369,7 +363,12 @@ function closeModal(modalSelector) {
     return;
   }
 
-  modal.hidden = true;
+  modal.classList.remove('is-open');
+  window.setTimeout(() => {
+    if (!modal.classList.contains('is-open')) {
+      modal.hidden = true;
+    }
+  }, 220);
 }
 
 function formatBytes(bytes) {
@@ -397,6 +396,131 @@ function renderViewer(title, meta, content) {
   viewer.textContent = content || 'No content available.';
 }
 
+function setupGemHunt() {
+  const gemNode = document.querySelector('[data-gem-node]');
+  const statusNode = document.querySelector('[data-gem-status]');
+  const triggerButtons = Array.from(document.querySelectorAll('[data-action="launch-gem-hunt"]'));
+  const revealOverlay = document.querySelector('[data-gem-reveal-overlay]');
+  const revealTitle = document.querySelector('[data-gem-reveal-title]');
+  const revealSubtitle = document.querySelector('[data-gem-reveal-subtitle]');
+
+  if (!gemNode || !statusNode || triggerButtons.length === 0) {
+    return;
+  }
+
+  let huntActive = false;
+  let huntSolved = false;
+  let hopTimer = null;
+  let revealBusy = false;
+
+  function updateStatus(text) {
+    statusNode.textContent = text;
+  }
+
+  function moveGem() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const margin = 36;
+    const x = Math.round(margin + Math.random() * Math.max(80, width - margin * 2));
+    const y = Math.round(margin + Math.random() * Math.max(80, height - margin * 2));
+
+    gemNode.style.left = `${x}px`;
+    gemNode.style.top = `${y}px`;
+  }
+
+  function endHunt() {
+    huntActive = false;
+    if (hopTimer) {
+      window.clearInterval(hopTimer);
+      hopTimer = null;
+    }
+  }
+
+  function launchHunt() {
+    if (huntSolved) {
+      updateStatus('gem archived');
+      renderViewer(
+        'TC_04 // GEM ARCHIVE',
+        'challenge complete',
+        'Gem already recovered. You can restart the page if you want to run the hunt again.'
+      );
+      return;
+    }
+
+    if (huntActive) {
+      moveGem();
+      updateStatus('signal moved');
+      return;
+    }
+
+    huntActive = true;
+    gemNode.hidden = false;
+    gemNode.classList.remove('is-found');
+    gemNode.classList.add('is-visible');
+    moveGem();
+    updateStatus('signal detected');
+    addEvent('TC_04 hunt started. Gem marker is moving across the console.');
+
+    hopTimer = window.setInterval(() => {
+      if (!huntActive || huntSolved) {
+        return;
+      }
+      moveGem();
+    }, 1800);
+  }
+
+  async function runGemRevealFlow() {
+    if (!revealOverlay || !revealTitle || !revealSubtitle) {
+      return;
+    }
+
+    revealOverlay.hidden = false;
+    requestAnimationFrame(() => {
+      revealOverlay.classList.add('is-active');
+    });
+
+    revealTitle.textContent = 'ACCESS GRANTED';
+    revealSubtitle.textContent = 'Gem Found';
+    await sleep(980);
+
+    revealTitle.textContent = 'BEST FEATURE UNLOCKED';
+    revealSubtitle.textContent = 'CC_02 // THE CASE STUDY';
+    await sleep(980);
+
+    revealOverlay.classList.remove('is-active');
+    await sleep(320);
+    revealOverlay.hidden = true;
+  }
+
+  triggerButtons.forEach((button) => {
+    button.addEventListener('click', launchHunt);
+  });
+
+  gemNode.addEventListener('click', async () => {
+    if (!huntActive || huntSolved || revealBusy) {
+      return;
+    }
+
+    revealBusy = true;
+    huntSolved = true;
+    endHunt();
+    gemNode.classList.remove('is-visible');
+    gemNode.classList.add('is-found');
+    updateStatus('gem recovered');
+
+    await runGemRevealFlow();
+
+    addEvent('TC_04 solved. Redirecting to full server intelligence page.');
+    window.location.href = '/server.html';
+  });
+
+  window.addEventListener('resize', () => {
+    if (huntActive && !huntSolved) {
+      moveGem();
+    }
+  });
+}
+
 async function openFile(name) {
   const response = await fetch(`/api/files/${encodeURIComponent(name)}`);
   if (!response.ok) {
@@ -414,33 +538,6 @@ function wireFileClicks() {
     item.addEventListener('click', async () => {
       const target = item.getAttribute('data-file');
       if (!target) {
-        return;
-      }
-
-      if (target === 'WAR_STORY.md') {
-        try {
-          await openWarStoryModal();
-        } catch (error) {
-          addEvent('CC_03 popup failed to open from registry.');
-        }
-        return;
-      }
-
-      if (target === 'The-Zero-Privilege-Pivot.pdf') {
-        try {
-          await openCaseStudyModal();
-        } catch (error) {
-          addEvent('CC_02 popup failed to open from registry.');
-        }
-        return;
-      }
-
-      if (target === 'RITUAL.md') {
-        try {
-          await openRitualModal();
-        } catch (error) {
-          addEvent('VC_02 popup failed to open from registry.');
-        }
         return;
       }
 
@@ -659,12 +756,12 @@ function wireActions() {
 
 async function init() {
   setupNeonCursor();
+  setupGemHunt();
 
   tickClock();
   window.setInterval(tickClock, 1000);
 
   setTicker();
-  setMetrics();
   setupReveal();
   wireActions();
   startEventFeed();

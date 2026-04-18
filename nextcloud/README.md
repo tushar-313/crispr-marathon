@@ -1,4 +1,4 @@
-# TC_01 + TC_05 - Nextcloud Resurrection and Monitoring Stack
+# Nextcloud Resurrection and Monitoring Stack
 
 This folder gives you a deployable Nextcloud stack with:
 

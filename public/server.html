@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#030702" />
+  <title>CRISPR Server Intel</title>
+  <link rel="stylesheet" href="/server.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <main class="shell">
+    <header class="topbar panel">
+      <div>
+        <p class="eyebrow">CRISPR // SERVER INTEL</p>
+        <h1>Everything About Server</h1>
+      </div>
+      <div class="actions">
+        <span class="chip live"><span class="dot"></span> LIVE</span>
+        <span class="chip" data-now>--:--:--</span>
+        <button class="chip action" type="button" data-refresh>refresh</button>
+        <a class="chip action" href="/">back</a>
+      </div>
+    </header>
+
+    <section class="panel grid">
+      <article class="card">
+        <h2>Service Snapshot</h2>
+        <dl class="kv" data-service-snapshot>
+          <div><dt>Health</dt><dd>loading...</dd></div>
+        </dl>
+      </article>
+
+      <article class="card">
+        <h2>Network Surface</h2>
+        <dl class="kv" data-network-snapshot></dl>
+      </article>
+
+      <article class="card">
+        <h2>Runtime Context</h2>
+        <dl class="kv" data-runtime-snapshot></dl>
+      </article>
+
+      <article class="card">
+        <h2>Payload Metrics</h2>
+        <dl class="kv" data-payload-metrics>
+          <div><dt>Total files</dt><dd>--</dd></div>
+          <div><dt>Total size</dt><dd>--</dd></div>
+          <div><dt>Last sync</dt><dd>--</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="panel card">
+      <div class="card-head">
+        <h2>Payload Registry</h2>
+        <a class="link" href="/api/files" target="_blank" rel="noreferrer">open /api/files</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Modified</th>
+            </tr>
+          </thead>
+          <tbody data-payload-table>
+            <tr><td colspan="4">Loading payload registry...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel card">
+      <h2>Activity Log</h2>
+      <div class="log" data-activity-log></div>
+    </section>
+  </main>
+
+  <script src="/server.js" type="module"></script>
+</body>
+</html>

@@ -83,7 +83,7 @@ services:
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus:/prometheus
     ports:
-      - 9090:9090
+      - 127.0.0.1:9090:9090
     networks:
       - nextcloud
 
@@ -101,7 +101,7 @@ services:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager:/alertmanager
     ports:
-      - 9093:9093
+      - 127.0.0.1:9093:9093
     networks:
       - nextcloud
 
@@ -112,8 +112,6 @@ services:
       - --config.file=/etc/blackbox/blackbox.yml
     volumes:
       - ./prometheus/blackbox.yml:/etc/blackbox/blackbox.yml:ro
-    ports:
-      - 9115:9115
     networks:
       - nextcloud
 
@@ -125,8 +123,6 @@ services:
     pid: host
     volumes:
       - /:/host:ro,rslave
-    ports:
-      - 9100:9100
     networks:
       - nextcloud
 
@@ -141,8 +137,6 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 8080:8080
     networks:
       - nextcloud
 
@@ -153,7 +147,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     volumes:
       - grafana:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

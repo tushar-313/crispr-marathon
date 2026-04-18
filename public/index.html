@@ -29,25 +29,13 @@
       </div>
       <div class="status-row">
         <span class="chip" data-clock>00:00:00</span>
+        <span class="chip stat-chip">integrity <strong data-integrity>99.97%</strong></span>
         <span class="chip online"><span class="dot"></span>link stable</span>
-        <button class="chip action" type="button" data-action="open-war-story">open cc_03</button>
         <button class="chip action" type="button" data-action="pulse">pulse nodes</button>
       </div>
     </header>
 
     <main class="grid">
-      <section class="panel hero reveal">
-        <p class="eyebrow">live node telemetry</p>
-        <h2>System Integrity: <span data-integrity>99.97%</span></h2>
-        <p class="lead">Real-time command surface for payload visibility, event tracking, and health diagnostics.</p>
-        <div class="metrics">
-          <article class="metric"><span>active nodes</span><strong data-count="12">0</strong></article>
-          <article class="metric"><span>threat score</span><strong data-count="3">0</strong></article>
-          <article class="metric"><span>sealed logs</span><strong data-count="248">0</strong></article>
-          <article class="metric"><span>open ports</span><strong data-count="7">0</strong></article>
-        </div>
-      </section>
-
       <section class="panel terminal-panel reveal">
         <div class="panel-head">
           <span>command stream</span>
@@ -80,6 +68,25 @@
         <pre class="viewer" data-viewer>Select a payload from the registry.</pre>
       </section>
 
+      <section class="panel letter-panel gem-panel reveal">
+        <div class="letter-head">
+          <div>
+            <p class="eyebrow">TC_04</p>
+            <h3>FIND THE GEM</h3>
+            <p class="letter-sub">hidden objective // easiest winner</p>
+          </div>
+          <button class="chip action" type="button" data-action="launch-gem-hunt">start hunt</button>
+        </div>
+        <article class="capsule-preview">
+          <p class="capsule-tag">field challenge</p>
+          <p class="capsule-copy">The gem appears as a rogue glowing marker somewhere on the live console. Catch it before it jumps again.</p>
+          <div class="capsule-actions">
+            <button class="button" type="button" data-action="launch-gem-hunt">scan for gem</button>
+            <span class="capsule-note" data-gem-status>hunt idle</span>
+          </div>
+        </article>
+      </section>
+
       <section class="panel letter-panel archive-vc01 reveal">
         <div class="letter-head">
           <div>
@@ -94,7 +101,6 @@
           <p class="capsule-copy">A human letter from 2026, stored like a time capsule and revealed through a popup reader.</p>
           <div class="capsule-actions">
             <button class="button" type="button" data-action="open-letter">open 2040 letter</button>
-            <span class="capsule-note">loader included</span>
           </div>
         </article>
       </section>
@@ -112,7 +118,6 @@
           <p class="capsule-tag">deployed and documented</p>
           <div class="capsule-actions">
             <button class="button" type="button" data-action="open-case-study">open deck PDF</button>
-            <span class="capsule-note">attached file linked</span>
           </div>
         </article>
       </section>
@@ -121,7 +126,7 @@
         <div class="letter-head">
           <div>
             <p class="eyebrow">VC_02</p>
-            <h3>YOUR SUCCESSION PLAN</h3>
+            <h3>SUCCESSION PLAN</h3>
             <p class="letter-sub">RITUAL // selection archive</p>
           </div>
           <button class="chip action" type="button" data-action="open-ritual">open ritual.md</button>
@@ -131,7 +136,6 @@
           <p class="capsule-copy">A trial by fire for the next batch, focused on grit, debugging depth, and improving the past.</p>
           <div class="capsule-actions">
             <button class="button" type="button" data-action="open-ritual">open selection ritual</button>
-            <span class="capsule-note">loader included</span>
           </div>
         </article>
       </section>
@@ -150,7 +154,6 @@
           <p class="capsule-copy">A story about fighting a locked Ubuntu container, backing out of bad tools, and getting a site live with Node, Express, and Git discipline.</p>
           <div class="capsule-actions">
             <button class="button" type="button" data-action="open-war-story">open deep-dive</button>
-            <span class="capsule-note">loader included</span>
           </div>
         </article>
       </section>
@@ -169,7 +172,6 @@
           <p class="capsule-copy">A one-year roadmap for keeping the server alive, building a hostel file mirror, and shipping a one-command deployer for the next batch.</p>
           <div class="capsule-actions">
             <button class="button" type="button" data-action="open-roadmap">open roadmap</button>
-            <span class="capsule-note">loader included</span>
           </div>
         </article>
       </section>
@@ -222,7 +224,7 @@
       <div class="modal-head">
         <div>
           <p class="eyebrow">VC_02</p>
-          <h3 id="ritual-title">Your Succession Plan</h3>
+          <h3 id="ritual-title">Succession Plan</h3>
         </div>
         <button class="chip action" type="button" data-ritual-close>close</button>
       </div>
@@ -311,7 +313,6 @@
       </div>
       <article class="case-study-body" data-case-study-body hidden>
         <p><strong>CC_02: The Case Study</strong></p>
-        <p>Pick one thing you deployed. Make a Gamma.ai deck about it. Nerdy. Honest. Tell us what you broke first.</p>
         <iframe class="case-study-frame" src="/assets/The-Zero-Privilege-Pivot.pdf" title="CC_02 Case Study PDF"></iframe>
         <p><a class="button" href="/assets/The-Zero-Privilege-Pivot.pdf" target="_blank" rel="noreferrer">open pdf in new tab</a></p>
       </article>
@@ -351,6 +352,16 @@
         <p><strong>The Lesson</strong><br />Being a developer isn't about knowing the fanciest tools. It’s about knowing how to work when those tools are taken away. If the front door is locked, find a window. If the window is locked, pick the lock.</p>
       </article>
     </section>
+  </div>
+
+  <button class="gem-node" data-gem-node type="button" aria-label="Hidden gem marker" hidden></button>
+
+  <div class="gem-reveal-overlay" data-gem-reveal-overlay hidden>
+    <div class="gem-reveal-stage" data-gem-reveal-stage>
+      <p class="eyebrow">TC_04 // GEM PROTOCOL</p>
+      <h2 data-gem-reveal-title>ACCESS GRANTED</h2>
+      <p class="gem-reveal-subtitle" data-gem-reveal-subtitle>Gem Found</p>
+    </div>
   </div>
 
   <script src="/app.js" type="module"></script>

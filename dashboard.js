@@ -112,10 +112,9 @@ function startServer(port) {
     });
 
     server.on('error', (error) => {
-        if (error.code === 'EADDRINUSE' && !process.env.PORT && port === DEFAULT_PORT) {
-            console.warn(`Port ${DEFAULT_PORT} is in use, falling back to an available port.`);
-            startServer(0);
-            return;
+        if (error.code === 'EADDRINUSE' && port === DEFAULT_PORT) {
+            console.error(`Port ${DEFAULT_PORT} is already in use. Stop the other process and restart.`);
+            process.exit(1);
         }
 
         throw error;
