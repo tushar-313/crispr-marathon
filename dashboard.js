@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const si = require('systeminformation');
+const promClient = require('prom-client');
 
 const app = express();
 const ROOT_DIR = __dirname;
@@ -10,6 +11,104 @@ const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const DEFAULT_PORT = 8000;
 const PORT = Number(process.env.PORT) || DEFAULT_PORT;
 const PAYLOAD_EXTENSIONS = new Set(['.txt', '.md']);
+const METRICS_ENDPOINT = process.env.METRICS_ENDPOINT || '/metrics';
+const METRICS_PREFIX = process.env.METRICS_PREFIX || 'crispr_';
+const METRICS_COLLECT_SYSTEM = (process.env.METRICS_COLLECT_SYSTEM || 'true').toLowerCase() === 'true';
+const TELEGRAM_ALERTS_ENABLED = (process.env.TELEGRAM_ALERTS_ENABLED || '').toLowerCase() === 'true';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
+const TELEGRAM_BOT_COMMANDS = (process.env.TELEGRAM_BOT_COMMANDS || '').toLowerCase() === 'true';
+
+const ALERT_INTERVAL_MS = Math.max(10_000, Number(process.env.ALERT_INTERVAL_MS) || 30_000);
+const ALERT_REPEAT_MS = Math.max(60_000, Number(process.env.ALERT_REPEAT_MS) || (60 * 60 * 1000));
+const ALERT_CONSECUTIVE_SAMPLES = Math.max(1, Number(process.env.ALERT_CONSECUTIVE_SAMPLES) || 3);
+
+const ALERT_CPU_THRESHOLD = Number(process.env.ALERT_CPU_THRESHOLD ?? 90);
+const ALERT_MEMORY_THRESHOLD = Number(process.env.ALERT_MEMORY_THRESHOLD ?? 90);
+const ALERT_DISK_THRESHOLD = Number(process.env.ALERT_DISK_THRESHOLD ?? 90);
+
+const register = promClient.register;
+register.setDefaultLabels({
+    service: 'crispr-marathon',
+    env: process.env.NODE_ENV || 'production',
+});
+
+const httpRequestsTotal = new promClient.Counter({
+    name: `${METRICS_PREFIX}http_requests_total`,
+    help: 'Total number of HTTP requests.',
+    labelNames: ['method', 'route', 'status'],
+});
+
+const httpRequestDurationSeconds = new promClient.Histogram({
+    name: `${METRICS_PREFIX}http_request_duration_seconds`,
+    help: 'HTTP request duration in seconds.',
+    labelNames: ['method', 'route', 'status'],
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+});
+
+const appUp = new promClient.Gauge({
+    name: `${METRICS_PREFIX}app_up`,
+    help: '1 if the app process is up.',
+});
+
+const systemCpuUsagePercent = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_cpu_usage_percent`,
+    help: 'CPU usage percent sampled by the app.',
+});
+
+const systemMemoryUsagePercent = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_memory_usage_percent`,
+    help: 'Memory usage percent sampled by the app.',
+});
+
+const systemDiskUsagePercent = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_disk_usage_percent`,
+    help: 'Disk usage percent of primary volume sampled by the app.',
+});
+
+const systemTemperatureCelsius = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_temperature_celsius`,
+    help: 'CPU temperature in Celsius sampled by the app (if available).',
+});
+
+const systemLoadAverage = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_load_average`,
+    help: 'OS load average sampled by the app.',
+    labelNames: ['window'],
+});
+
+const systemHostUptimeSeconds = new promClient.Gauge({
+    name: `${METRICS_PREFIX}system_host_uptime_seconds`,
+    help: 'Host uptime in seconds sampled by the app.',
+});
+
+function normalizeRoute(req) {
+    if (req.route && req.route.path) {
+        return String(req.route.path);
+    }
+
+    // Fallback: avoid high-cardinality labels.
+    const pathOnly = String(req.path || '/');
+    if (pathOnly.startsWith('/assets/')) return '/assets/:name';
+    if (pathOnly.startsWith('/api/files/')) return '/api/files/:name';
+    return pathOnly;
+}
+
+app.use((req, res, next) => {
+    if (req.path === METRICS_ENDPOINT) {
+        next();
+        return;
+    }
+
+    const end = httpRequestDurationSeconds.startTimer();
+    res.on('finish', () => {
+        const route = normalizeRoute(req);
+        const status = String(res.statusCode);
+        httpRequestsTotal.inc({ method: req.method, route, status }, 1);
+        end({ method: req.method, route, status });
+    });
+    next();
+});
 
 function getPayloadFiles() {
     return fs
@@ -35,7 +134,12 @@ function getServerFilePath() {
 }
 
 function getPreferredHostIp() {
-    const interfaces = os.networkInterfaces();
+    let interfaces;
+    try {
+        interfaces = os.networkInterfaces();
+    } catch {
+        return '127.0.0.1';
+    }
 
     for (const entries of Object.values(interfaces)) {
         for (const entry of entries || []) {
@@ -56,6 +160,24 @@ function roundNumber(value, digits = 1) {
 
     const factor = 10 ** digits;
     return Math.round(numericValue * factor) / factor;
+}
+
+function safeOsUptimeSeconds() {
+    try {
+        const value = os.uptime();
+        return Number.isFinite(value) ? value : null;
+    } catch {
+        return null;
+    }
+}
+
+function safeProcessUptimeSeconds() {
+    try {
+        const value = process.uptime();
+        return Number.isFinite(value) ? value : null;
+    } catch {
+        return null;
+    }
 }
 
 function pickPrimaryVolume(volumes) {
@@ -100,24 +222,27 @@ function pickTemperature(temperature) {
 
 async function safeCollect(task, fallback) {
     try {
-        return await task;
+        return await task();
     } catch {
         return fallback;
     }
 }
 
 async function collectSystemSnapshot() {
-    const [cpu, load, memory, volumes, temperature, osInfo, timeInfo, networkInterfaces, networkStats] = await Promise.all([
-        safeCollect(si.cpu(), {}),
-        safeCollect(si.currentLoad(), {}),
-        safeCollect(si.mem(), {}),
-        safeCollect(si.fsSize(), []),
-        safeCollect(si.cpuTemperature(), {}),
-        safeCollect(si.osInfo(), {}),
-        safeCollect(si.time(), {}),
-        safeCollect(si.networkInterfaces(), []),
-        safeCollect(si.networkStats(), []),
+    const [cpu, load, memory, volumes, temperature, osInfo, timeInfo] = await Promise.all([
+        safeCollect(() => si.cpu(), {}),
+        safeCollect(() => si.currentLoad(), {}),
+        safeCollect(() => si.mem(), {}),
+        safeCollect(() => si.fsSize(), []),
+        safeCollect(() => si.cpuTemperature(), {}),
+        safeCollect(() => si.osInfo(), {}),
+        safeCollect(() => si.time(), {}),
     ]);
+
+    // Some environments (sandboxes / hardened kernels) may disallow interface enumeration.
+    // Avoid crashing the process by skipping network interface stats entirely.
+    const networkInterfaces = [];
+    const networkStats = [];
 
     const primaryVolume = pickPrimaryVolume(volumes);
     const primaryInterface = pickPrimaryInterface(networkInterfaces);
@@ -142,7 +267,7 @@ async function collectSystemSnapshot() {
             architecture: os.arch(),
             kernel: osInfo.kernel || os.release(),
             distro: osInfo.distro || osInfo.platform || 'n/a',
-            uptimeSeconds: os.uptime(),
+            uptimeSeconds: safeOsUptimeSeconds(),
         },
         cpu: {
             manufacturer: cpu.manufacturer || 'n/a',
@@ -232,7 +357,7 @@ async function collectSystemSnapshot() {
         process: {
             pid: process.pid,
             nodeVersion: process.version,
-            uptimeSeconds: process.uptime(),
+            uptimeSeconds: safeProcessUptimeSeconds(),
             rss: process.memoryUsage().rss,
             heapUsed: process.memoryUsage().heapUsed,
             heapTotal: process.memoryUsage().heapTotal,
@@ -240,11 +365,367 @@ async function collectSystemSnapshot() {
         },
         time: {
             current: timeInfo.current || new Date().toISOString(),
-            uptimeSeconds: timeInfo.uptime || os.uptime(),
+            uptimeSeconds: Number.isFinite(timeInfo.uptime) ? timeInfo.uptime : safeOsUptimeSeconds(),
             timezone: timeInfo.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'n/a',
             bootTime: timeInfo.bootTime || null,
         },
     };
+}
+
+function formatPercent(value) {
+    return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'n/a';
+}
+
+async function sendTelegram(message) {
+    if (!TELEGRAM_ALERTS_ENABLED || !TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        return { ok: false, skipped: true };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: String(message).slice(0, 3900),
+                disable_web_page_preview: true,
+            }),
+            signal: controller.signal,
+        });
+
+        return { ok: response.ok, status: response.status };
+    } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : 'unknown error' };
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function createAlertState() {
+    return {
+        consecutive: 0,
+        firing: false,
+        lastSentAt: 0,
+    };
+}
+
+const alertStates = {
+    highCpu: createAlertState(),
+    highMemory: createAlertState(),
+    highDisk: createAlertState(),
+};
+
+async function evaluateAlert({ key, state, condition, title, detail }) {
+    if (condition) {
+        state.consecutive += 1;
+    } else {
+        state.consecutive = 0;
+    }
+
+    const shouldFire = state.consecutive >= ALERT_CONSECUTIVE_SAMPLES;
+    const now = Date.now();
+
+    if (shouldFire && !state.firing) {
+        state.firing = true;
+        state.lastSentAt = now;
+        await sendTelegram(`FIRING: ${title}\n${detail}`);
+        return;
+    }
+
+    if (shouldFire && state.firing && (now - state.lastSentAt) >= ALERT_REPEAT_MS) {
+        state.lastSentAt = now;
+        await sendTelegram(`REMINDER: ${title}\n${detail}`);
+        return;
+    }
+
+    if (!shouldFire && state.firing) {
+        state.firing = false;
+        state.lastSentAt = now;
+        await sendTelegram(`RESOLVED: ${title}\n${detail}`);
+    }
+}
+
+let alertsLoopRunning = false;
+function startTelegramAlertsLoop() {
+    if (alertsLoopRunning) return;
+    if (!TELEGRAM_ALERTS_ENABLED) return;
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+
+    alertsLoopRunning = true;
+
+    const tick = async () => {
+        try {
+            const snapshot = await collectSystemSnapshot();
+
+            const cpu = snapshot?.cpu?.usagePercent;
+            const mem = snapshot?.memory?.usagePercent;
+            const disk = snapshot?.storage?.primary?.usagePercent;
+
+            await Promise.all([
+                evaluateAlert({
+                    key: 'highCpu',
+                    state: alertStates.highCpu,
+                    condition: Number.isFinite(cpu) && cpu >= ALERT_CPU_THRESHOLD,
+                    title: `High CPU (>= ${ALERT_CPU_THRESHOLD}%)`,
+                    detail: `CPU: ${formatPercent(cpu)}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                }),
+                evaluateAlert({
+                    key: 'highMemory',
+                    state: alertStates.highMemory,
+                    condition: Number.isFinite(mem) && mem >= ALERT_MEMORY_THRESHOLD,
+                    title: `High Memory (>= ${ALERT_MEMORY_THRESHOLD}%)`,
+                    detail: `Memory: ${formatPercent(mem)}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                }),
+                evaluateAlert({
+                    key: 'highDisk',
+                    state: alertStates.highDisk,
+                    condition: Number.isFinite(disk) && disk >= ALERT_DISK_THRESHOLD,
+                    title: `High Disk (>= ${ALERT_DISK_THRESHOLD}%)`,
+                    detail: `Disk: ${formatPercent(disk)}\nMount: ${snapshot?.storage?.primary?.mount || 'n/a'}\nHost: ${snapshot?.host?.hostname || 'n/a'}\nTime: ${snapshot?.sampledAt || 'n/a'}`,
+                }),
+            ]);
+        } catch {
+            // Swallow alert loop failures: alerts should never crash the server.
+        }
+    };
+
+    // Run once after boot, then on interval.
+    tick().catch(() => {});
+    setInterval(() => tick().catch(() => {}), ALERT_INTERVAL_MS);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Telegram Bot: Interactive Command Handler (long-polling, no extra ports)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return 'n/a';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let i = 0;
+    let val = bytes;
+    while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+    return `${val.toFixed(1)} ${units[i]}`;
+}
+
+function formatDuration(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return 'n/a';
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    parts.push(`${s}s`);
+    return parts.join(' ');
+}
+
+async function handleBotCommand(command) {
+    const cmd = command.trim().toLowerCase().split(/\s+/)[0];
+
+    switch (cmd) {
+        case '/start':
+        case '/help': {
+            return [
+                '🧬 *CRISPR Marathon Bot*',
+                '',
+                'Available commands:',
+                '  /status  — Full server snapshot',
+                '  /health  — Quick health check',
+                '  /uptime  — Host & process uptime',
+                '  /disk    — Storage volumes',
+                '  /alerts  — Current alert states',
+                '  /help    — This message',
+            ].join('\n');
+        }
+
+        case '/status': {
+            try {
+                const snap = await collectSystemSnapshot();
+                const cpu = snap?.cpu?.usagePercent;
+                const mem = snap?.memory?.usagePercent;
+                const disk = snap?.storage?.primary?.usagePercent;
+                const temp = snap?.temperature?.current;
+                const load = snap?.cpu?.averages;
+
+                return [
+                    '📊 *Server Status*',
+                    '',
+                    `🖥  Host: \`${snap?.host?.hostname || 'n/a'}\``,
+                    `🐧  OS: ${snap?.host?.distro || 'n/a'} (${snap?.host?.architecture || 'n/a'})`,
+                    `⚙️  CPU: ${snap?.cpu?.brand || 'n/a'}`,
+                    '',
+                    `💻  CPU Usage: *${formatPercent(cpu)}*`,
+                    `🧠  Memory: *${formatPercent(mem)}* (${formatBytes(snap?.memory?.used)} / ${formatBytes(snap?.memory?.total)})`,
+                    `💾  Disk: *${formatPercent(disk)}* (${formatBytes(snap?.storage?.primary?.used)} / ${formatBytes(snap?.storage?.primary?.size)})`,
+                    `🌡  Temp: ${temp != null ? `${temp}°C` : 'n/a'}`,
+                    `📈  Load: ${Array.isArray(load) ? load.join(' / ') : 'n/a'}`,
+                    `⏱  Uptime: ${formatDuration(snap?.host?.uptimeSeconds)}`,
+                    '',
+                    `🕐  Sampled: ${snap?.sampledAt || 'n/a'}`,
+                ].join('\n');
+            } catch (err) {
+                return `❌ Failed to collect status: ${err.message}`;
+            }
+        }
+
+        case '/health': {
+            try {
+                const snap = await collectSystemSnapshot();
+                const cpu = snap?.cpu?.usagePercent ?? 0;
+                const mem = snap?.memory?.usagePercent ?? 0;
+                const disk = snap?.storage?.primary?.usagePercent ?? 0;
+
+                const cpuOk = cpu < ALERT_CPU_THRESHOLD;
+                const memOk = mem < ALERT_MEMORY_THRESHOLD;
+                const diskOk = disk < ALERT_DISK_THRESHOLD;
+                const allOk = cpuOk && memOk && diskOk;
+
+                return [
+                    allOk ? '✅ *All Systems Healthy*' : '⚠️ *Issues Detected*',
+                    '',
+                    `${cpuOk ? '🟢' : '🔴'} CPU: ${formatPercent(cpu)} (threshold: ${ALERT_CPU_THRESHOLD}%)`,
+                    `${memOk ? '🟢' : '🔴'} Memory: ${formatPercent(mem)} (threshold: ${ALERT_MEMORY_THRESHOLD}%)`,
+                    `${diskOk ? '🟢' : '🔴'} Disk: ${formatPercent(disk)} (threshold: ${ALERT_DISK_THRESHOLD}%)`,
+                ].join('\n');
+            } catch (err) {
+                return `❌ Health check failed: ${err.message}`;
+            }
+        }
+
+        case '/uptime': {
+            try {
+                const snap = await collectSystemSnapshot();
+                return [
+                    '⏱ *Uptime Report*',
+                    '',
+                    `🖥  Host: ${formatDuration(snap?.host?.uptimeSeconds)}`,
+                    `🟢  Process: ${formatDuration(snap?.process?.uptimeSeconds)}`,
+                    `📦  Node: ${snap?.process?.nodeVersion || 'n/a'}`,
+                    `🧠  Heap: ${formatBytes(snap?.process?.heapUsed)} / ${formatBytes(snap?.process?.heapTotal)}`,
+                    `📍  RSS: ${formatBytes(snap?.process?.rss)}`,
+                ].join('\n');
+            } catch (err) {
+                return `❌ Failed: ${err.message}`;
+            }
+        }
+
+        case '/disk': {
+            try {
+                const snap = await collectSystemSnapshot();
+                const vols = snap?.storage?.volumes || [];
+                if (!vols.length) return '💾 No storage volumes found.';
+
+                const lines = ['💾 *Storage Volumes*', ''];
+                for (const v of vols) {
+                    lines.push(`\`${v.mount}\` — ${formatPercent(v.usagePercent)} used (${formatBytes(v.used)} / ${formatBytes(v.size)})`);
+                }
+                return lines.join('\n');
+            } catch (err) {
+                return `❌ Failed: ${err.message}`;
+            }
+        }
+
+        case '/alerts': {
+            const lines = ['🔔 *Alert States*', ''];
+            for (const [key, state] of Object.entries(alertStates)) {
+                const icon = state.firing ? '🔴 FIRING' : '🟢 OK';
+                lines.push(`${icon}  \`${key}\` — consecutive: ${state.consecutive}`);
+            }
+            lines.push('');
+            lines.push(`Thresholds: CPU ${ALERT_CPU_THRESHOLD}% | Mem ${ALERT_MEMORY_THRESHOLD}% | Disk ${ALERT_DISK_THRESHOLD}%`);
+            return lines.join('\n');
+        }
+
+        default:
+            return `❓ Unknown command: \`${cmd}\`\nSend /help for available commands.`;
+    }
+}
+
+async function sendTelegramReply(chatId, text) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: String(text).slice(0, 3900),
+                parse_mode: 'Markdown',
+                disable_web_page_preview: true,
+            }),
+            signal: controller.signal,
+        });
+    } catch (err) {
+        console.error(`[telegram-bot] Failed to send reply: ${err.message}`);
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+let botPollingRunning = false;
+let lastUpdateId = 0;
+
+async function pollTelegramUpdates() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 35000);
+    try {
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30&allowed_updates=["message"]`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.ok || !Array.isArray(data.result)) return;
+
+        for (const update of data.result) {
+            lastUpdateId = Math.max(lastUpdateId, update.update_id);
+            const msg = update.message;
+            if (!msg || !msg.text) continue;
+
+            // Only respond to the authorized chat
+            const chatId = String(msg.chat?.id || '');
+            if (chatId !== TELEGRAM_CHAT_ID) {
+                await sendTelegramReply(msg.chat.id, '🔒 Unauthorized. This bot only responds to its owner.');
+                continue;
+            }
+
+            if (msg.text.startsWith('/')) {
+                const reply = await handleBotCommand(msg.text);
+                await sendTelegramReply(msg.chat.id, reply);
+            }
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error(`[telegram-bot] Polling error: ${err.message}`);
+        }
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function startTelegramBotPolling() {
+    if (botPollingRunning) return;
+    if (!TELEGRAM_BOT_COMMANDS) return;
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+
+    botPollingRunning = true;
+    console.log('[telegram-bot] Command bot started (long-polling)');
+
+    const loop = async () => {
+        while (botPollingRunning) {
+            await pollTelegramUpdates();
+            // Small delay to avoid hammering on errors
+            await new Promise(r => setTimeout(r, 500));
+        }
+    };
+
+    loop().catch((err) => {
+        console.error(`[telegram-bot] Loop crashed: ${err.message}`);
+        botPollingRunning = false;
+    });
 }
 
 app.use(express.static(PUBLIC_DIR, {
@@ -319,6 +800,53 @@ app.get(['/healthz', '/api/healthz'], (req, res) => {
     res.json({ ok: true, service: 'crispr-marathon' });
 });
 
+let lastMetricsSampleAt = 0;
+let lastMetricsSample = null;
+const METRICS_SAMPLE_TTL_MS = Math.max(1000, Number(process.env.METRICS_SAMPLE_TTL_MS) || 5000);
+
+async function sampleMetrics() {
+    if (!METRICS_COLLECT_SYSTEM) {
+        appUp.set(1);
+        return;
+    }
+
+    const now = Date.now();
+    if (lastMetricsSample && (now - lastMetricsSampleAt) < METRICS_SAMPLE_TTL_MS) {
+        return;
+    }
+
+    const snapshot = await collectSystemSnapshot();
+    lastMetricsSample = snapshot;
+    lastMetricsSampleAt = now;
+
+    appUp.set(1);
+
+    if (Number.isFinite(snapshot?.cpu?.usagePercent)) systemCpuUsagePercent.set(snapshot.cpu.usagePercent);
+    if (Number.isFinite(snapshot?.memory?.usagePercent)) systemMemoryUsagePercent.set(snapshot.memory.usagePercent);
+    if (Number.isFinite(snapshot?.storage?.primary?.usagePercent)) systemDiskUsagePercent.set(snapshot.storage.primary.usagePercent);
+    if (Number.isFinite(snapshot?.temperature?.current)) systemTemperatureCelsius.set(snapshot.temperature.current);
+    if (Array.isArray(snapshot?.cpu?.averages)) {
+        const [one, five, fifteen] = snapshot.cpu.averages;
+        if (Number.isFinite(one)) systemLoadAverage.set({ window: '1m' }, one);
+        if (Number.isFinite(five)) systemLoadAverage.set({ window: '5m' }, five);
+        if (Number.isFinite(fifteen)) systemLoadAverage.set({ window: '15m' }, fifteen);
+    }
+    if (Number.isFinite(snapshot?.host?.uptimeSeconds)) systemHostUptimeSeconds.set(snapshot.host.uptimeSeconds);
+}
+
+app.get(METRICS_ENDPOINT, async (req, res) => {
+    try {
+        await sampleMetrics();
+        res.set('Content-Type', register.contentType);
+        res.end(await register.metrics());
+    } catch (error) {
+        res.status(500).json({
+            error: 'failed to collect metrics',
+            detail: error instanceof Error ? error.message : 'unknown error',
+        });
+    }
+});
+
 app.get('/api/system', async (req, res) => {
     try {
         const snapshot = await collectSystemSnapshot();
@@ -343,6 +871,7 @@ function startServer(port) {
     const server = app.listen(port, '0.0.0.0', () => {
         const hostIp = getPreferredHostIp();
         console.log(`server live on http://${hostIp}:${port}/`);
+        console.log(`metrics live on http://${hostIp}:${port}${METRICS_ENDPOINT}`);
     });
 
     server.on('error', (error) => {
@@ -356,3 +885,5 @@ function startServer(port) {
 }
 
 startServer(PORT);
+startTelegramAlertsLoop();
+startTelegramBotPolling();
